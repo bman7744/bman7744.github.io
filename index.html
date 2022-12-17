@@ -15606,15 +15606,16 @@ Beginning classification predicting ...
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <p>As we can see, we get a p-value of 0. While in actuality it isn’t zero, it's so small that python just rounded it to a zero. This intuitively makes sense of course, as when we’re dealing with such large numbers the chance that we guessed so many correctly is incredibly small. Since our p-value is (very) below 0.05, we can conclude that the null hypothesis likely is incorrect. This means that our initial hypothesis is correct, and we were able to make a model that can guess the political alignment of the author better than random guessing.</p>
 <p>So what can we do to improve? One of the easiest ways to improve the model accuracy is to increase the sample size. For this model in particular, I’ve noticed that increasing the sample size has consistently increased the accuracy of the model quite significantly. Additionally, there are many parameters in this model that could be tuned for better results. For instance, the number of topics the LDA model produces. There are also likely many more attributes to be considered that would increase the accuracy at least somewhat. However, there is a limit as to how far it can be increased, given that some tweets are so short or simply lack any kind of partisan content, so a model can only perform so well. Overall, I’m very happy with the accuracy of the model.</p>
+<p>Below we can see that with Democrats we were correct slightly more often, though both groups proved to be fairly similar.</p>
 
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[153]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[188]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">correct</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">X_test</span><span class="p">,</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">y_test</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
@@ -15624,7 +15625,24 @@ Beginning classification predicting ...
 <span class="n">correct</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">correct</span><span class="p">,</span><span class="n">unscored_set</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">)</span>
 <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">len</span><span class="p">()</span>
 <span class="c1">#correct.groupby(&#39;account_type&#39;).mean()[&#39;correct_int&#39;]</span>
-<span class="n">correct</span><span class="p">[[</span><span class="s1">&#39;length&#39;</span><span class="p">,</span><span class="s1">&#39;text&#39;</span><span class="p">,</span><span class="s1">&#39;correct_int&#39;</span><span class="p">]]</span>
+<span class="c1">#correct[[&#39;length&#39;,&#39;text&#39;,&#39;correct_int&#39;]]</span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[187]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">party_score</span> <span class="o">=</span> <span class="n">correct</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;party_x&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()[</span><span class="s1">&#39;correct_int&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;correct_int&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">party_score</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">party_score</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -15642,105 +15660,29 @@ Beginning classification predicting ...
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[153]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[187]:</div>
 
 
 
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>length</th>
-      <th>text</th>
-      <th>correct_int</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>233</td>
-      <td>The right to KEEP and BEAR arms shall not be i...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>204</td>
-      <td>A really cool experience to be in Bryant-Denny...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>226</td>
-      <td>RT @AdamLaxalt Joe Biden has spent more than o...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>140</td>
-      <td>Fair season continues in #WI06! It was great h...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>594</td>
-      <td>NEWS: For the first time in more than a decade...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>78792</th>
-      <td>196</td>
-      <td>ICYMI: Starting July 16, 988 is available for ...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>78793</th>
-      <td>318</td>
-      <td>I am so glad that the clean energy revolution ...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>78794</th>
-      <td>434</td>
-      <td>Right now, America and our allies are not read...</td>
-      <td>0</td>
-    </tr>
-    <tr>
-      <th>78795</th>
-      <td>208</td>
-      <td>RT @NRSC Chairman @ScottforFlorida: “A Plan to...</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>78796</th>
-      <td>462</td>
-      <td>Had a great meeting with AAPI small business l...</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>78797 rows × 3 columns</p>
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
+<pre>&lt;AxesSubplot:xlabel=&#39;correct_int&#39;, ylabel=&#39;party_x&#39;&gt;</pre>
 </div>
+
+</div>
+
+<div class="jp-OutputArea-child">
+
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+
+
+
+
+<div class="jp-RenderedImage jp-OutputArea-output ">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXoAAAEHCAYAAACgHI2PAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjUuMSwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy/YYfK9AAAACXBIWXMAAAsTAAALEwEAmpwYAAANt0lEQVR4nO3df7DldV3H8efLXSkIFBBoFINFB7FAoNzCNKfUHJUy0wFFGZiI0fzNP5qMFo42Nf5IxyEzhjEGcHJoREtkrIbBIhMx7irsikQQKDk5Y0gigYPu+u6Pc5DLZXfvl/Z8z7m87/Mxs7P3/Ljf876f2fu83/2ec78nVYUkqa9HLXoASdK4DL0kNWfoJak5Qy9JzRl6SWpu46IHWOmggw6qTZs2LXoMSXpE2bJlyx1VdfDObltzod+0aRNLS0uLHkOSHlGSfGNXt3noRpKaM/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4Zekppbc78Ze+M3v8PT33rxoseQpLna8v7TR9u2e/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4Zekpoz9JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpOUMvSc0ZeklqztBLUnOGXpKaM/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4Zekpoz9JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6Smts45saT7AC2AY8GtgMXAR+qqh+N+biSpAeMGnrg+1V1PECSQ4CPA48F3jny40qSpuZ26Kaqvg28BnhjkszrcSVpvZvrMfqqunX6mIcsvz7Ja5IsJVnafu/d8xxJktpbxJOxD9mbr6rzq2pzVW3euM9+CxhJkvqaa+iTPAnYAXx7no8rSevZ3EKf5GDgPODDVVXzelxJWu/GftXN3kmu44GXV34M+ODIjylJWmbU0FfVhjG3L0lanb8ZK0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpOUMvSc0ZeklqztBLUnOGXpKaM/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4Zekpoz9JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpuVVDn+TMFZc3JHnneCNJkmZpyB7985J8NsnjkxwDXAPsN/JckqQZ2bjaHarqVUleAWwD7gVeWVVfGH0ySdJMDDl0cyRwFvBJ4OvAaUn2GXkuSdKMDDl08xngD6vq94BfBW4Grh11KknSzKSqdn+H5DFV9b0V1x1ZVTdPP35+VV0xq4E2b95cS0tLs9qcJK0LSbZU1ead3bbqHv3KyE+vu3nZxffuwWySpJHN4nX0mcE2JEkjmUXod3/sR5K0UP5mrCQ1N4vQf30G25AkjWTI6+iXkrwhyQE7u72qXjb7sSRJszJkj/4U4AnAtUkuSfKCJD4BK0mPEENeXnlLVb0DeArwceAC4PYk70py4NgDSpL2zKBj9EmOBT4AvJ/JqRBOAr4HfG680SRJs7DqSc2SbAG+C/wlcHZV3Te96UtJnjXibJKkGVg19MDJVXXr8iuSHFFVt/lErCStfUMO3Vw68DpJ0hq0yz36JE8FjgYem2T5nvtjgJ8cezBJ0mzs7tDNUcBvAvsDL152/d3Aq0ecSZI0Q7sMfVV9OsnlwNuq6k/mOJMkaYZ2e4y+qnYAz5/TLJKkEQx51c3VST4M/DVwz/1XVtWXR5tKkjQzQ0L/zOnf7152XQHPnf04kqRZWzX0VfWceQwiSRrHkD16kvwGk5da/vhllVX17l1/hiRprRhymuLzgFcAb2LytoEnA4ePPJckaUYGHaOvqmOTbK2qdyX5APCpsQb6wbdu4PZ3P22szUvSqA47Z9uiR3iIIadA+P7073uTPAH4IXDEeCNJkmZpyB795Un2B94HbJle99HRJpIkzdSQ0P8p8Drg2cAXgc8DfzHmUJKk2RkS+ouYnN/m3OnlVwIXAy8fayhJ0uwMCf1RVXXcssv/mOT6sQaSJM3WkCdjv5LkGfdfSHIC8IXxRpIkzdKQPfoTgNOT3D69fBhwY5JtQFXVsaNNJ0naY0NC/8LRp5AkjWbIuW6+MY9BJEnjGHKMXpL0CGboJak5Qy9JzRl6SWrO0EtSc4Zekpoz9JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpOUMvSc0ZeklqztBLUnOGXpKaM/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4ZekprbOObGk+wAtk0f5zbgtKr67piPKUl6sLH36L9fVcdX1THAncAbRn48SdIK8zx080Xg0Dk+niSJOYU+yQbgecBl83g8SdIDxg793kmuA74DHAhcsbM7JXlNkqUkS3fes2PkkSRpfZnLMXrgcGAvdnGMvqrOr6rNVbX5wJ/aMPJIkrS+zOXQTVXdBbwZeEuSR8/jMSVJE3N7MraqvgJcD5wyr8eUJI38Ovqq2nfF5ReP+XiSpIfyN2MlqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpOUMvSc0ZeklqztBLUnOGXpKaM/SS1Jyhl6TmDL0kNWfoJak5Qy9JzRl6SWrO0EtSc4Zekpoz9JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5gy9JDVn6CWpOUMvSc0ZeklqztBLUnOGXpKaM/SS1NzGRQ+w0l6PP5rDzlla9BiS1IZ79JLUnKGXpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl6SmjP0ktScoZek5lJVi57hQZLcDdy06DnWsIOAOxY9xBrm+uye67Nrj/S1ObyqDt7ZDWvuXDfATVW1edFDrFVJllyfXXN9ds/12bXOa+OhG0lqztBLUnNrMfTnL3qANc712T3XZ/dcn11ruzZr7slYSdJsrcU9eknSDBl6SWpuYaFP8sIkNyW5JcnZO7k9Sc6d3r41yS8sYs5FGbA+p07XZWuSq5Mct4g5F2G1tVl2v19MsiPJSfOcb9GGrE+SX0tyXZIbklw17xkXacD31mOTfCbJ9dP1OWMRc85UVc39D7AB+A/gScBewPXAz624z4nA3wEBngF8aRGzruH1eSZwwPTjF62X9RmyNsvu9zngs8BJi557La0PsD/wNeCw6eVDFj33GluftwPvnX58MHAnsNeiZ9+TP4vao/8l4JaqurWqfgBcArxkxX1eAlxcE9cA+yd5/LwHXZBV16eqrq6q/5levAZ44pxnXJQh/3YA3gR8Evj2PIdbA4asz6uAT1XV7QBVtZ7WaMj6FLBfkgD7Mgn99vmOOVuLCv2hwH8uu/zN6XUP9z5dPdyv/Uwm//tZD1ZdmySHAi8FzpvjXGvFkH87TwEOSPJPSbYkOX1u0y3ekPX5MPCzwH8B24CzqupH8xlvHIs6BUJ2ct3K13kOuU9Xg7/2JM9hEvpfGXWitWPI2nwIeFtV7ZjslK0rQ9ZnI/B04HnA3sAXk1xTVf8+9nBrwJD1eQFwHfBc4MnAFUk+X1XfG3m20Swq9N8EfmbZ5Scy+en5cO/T1aCvPcmxwEeBF1XVd+Y026INWZvNwCXTyB8EnJhke1X97VwmXKyh31t3VNU9wD1J/hk4DlgPoR+yPmcA76nJQfpbktwGPBX41/mMOHuLOnRzLXBkkiOS7AWcAly24j6XAadPX33zDOCuqvrWvAddkFXXJ8lhwKeA09bJntj9Vl2bqjqiqjZV1SbgUuD16yTyMOx769PAs5NsTLIPcAJw45znXJQh63M7k//tkOSngaOAW+c65YwtZI++qrYneSPwD0yeBb+gqm5I8trp7ecxebXEicAtwL1MfsquCwPX5xzgccBHpnuu26vpmfeWG7g269aQ9amqG5P8PbAV+BHw0ar66uKmnp+B/37+CLgwyTYmh3reVlWP5NMXewoESerO34yVpOYMvSQ1Z+glqTlDL0nNGXpJas7QS1Jzhl7aA0n2T/L6Ve7zhCSXDtjW22c3mfQAX0evdS3JxqravqvLAz5/E3B5VR0zg1n+t6r23dPtSCst6lw30sxNz8L4FiYnqdoK/AFwAZNziv83cEZV3Z7kQiannv154MtJHrfi8keAP59+3r3Aq6vq36a/Dn8ek3OZA7wOeDPw5CTXAVdU1Vt3Mtcmpj8MkvwO8FvAPkxOmPU3VfX7Sd4D7D3dzg1Vdeos10brm6FXC0mOBt4BPKuq7khyIHARk/c0uCjJ7wLnAr89/ZSnAL8+PcPlhSsuXwm8tqpuTnIC8BEmZzI8F7iqql6aZAOTc5WfDRxTVcc/jHGPZ/JD5T7gpiR/VlVnJ3njw9yONIihVxfPBS69/5wkVXVnkl8GXja9/WPA+5bd/xNVtWPl5ST7Mnn3rk8sO8XxTyx7jNOn298B3JXkgP/HrFdW1V0ASb4GHM6Dz5EuzZShVxdh9fcrWH77PStuu//yo4Dvjrxnfd+yj3fg96FG5qtu1MWVwMunx9uZHrq5mslpaAFOBf5ltY1M31zitiQnT7eTZW+8fiWT4/Ik2ZDkMcDdwH4z+hp+mOTRM9qW9GOGXi1U1Q3AHwNXJbke+CCTJ0rPSLIVOA04a+DmTgXOnG7nBh54T9GzgOdMT1+7BTh6+oYvX0jy1STv38Mv43xga5K/2sPtSA/iyyslqTn36CWpOZ8EkmYkydOYvLpnufuq6oRFzCPdz0M3ktSch24kqTlDL0nNGXpJas7QS1Jz/wf1ZkZclZmunQAAAABJRU5ErkJggg==
+"
+>
 </div>
 
 </div>
