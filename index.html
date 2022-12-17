@@ -3,7 +3,7 @@
 <head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>FinalProject</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>FinalTweetAnalysis</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 
 
 
@@ -14561,31 +14561,209 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     </script>
     <!-- End of mathjax configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[38]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[70]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+<span class="kn">from</span> <span class="nn">textblob</span> <span class="kn">import</span> <span class="n">TextBlob</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">CountVectorizer</span>
+<span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">LatentDirichletAllocation</span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LinearRegression</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">mean_squared_error</span><span class="p">,</span> <span class="n">mean_absolute_error</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">preprocessing</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">svm</span>
+<span class="kn">from</span> <span class="nn">sklearn.ensemble</span> <span class="kn">import</span> <span class="n">RandomForestClassifier</span>
+<span class="kn">from</span> <span class="nn">sklearn.neighbors</span> <span class="kn">import</span> <span class="n">KNeighborsClassifier</span>
+<span class="kn">from</span> <span class="nn">sklearn.tree</span> <span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
 
 <span class="c1"># https://github.com/alexlitel/congresstweets</span>
 
-<span class="k">def</span> <span class="nf">print_percent</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span><span class="n">total</span><span class="p">,</span><span class="n">gran</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">print_percent</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span><span class="n">total</span><span class="p">,</span><span class="n">gran</span><span class="p">,</span><span class="n">title</span><span class="p">):</span>
     <span class="n">delta</span><span class="o">=</span><span class="n">gran</span><span class="o">*</span><span class="n">total</span>
-    <span class="k">if</span> <span class="n">curr</span><span class="o">%</span><span class="k">gran</span>&lt;1:
-        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;Progress: </span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">curr</span><span class="o">/</span><span class="n">total</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">curr</span><span class="o">%</span><span class="k">delta</span>&lt;1:
+        <span class="nb">print</span> <span class="p">(</span><span class="n">title</span><span class="o">+</span><span class="s2">&quot;: </span><span class="si">{:.3f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">curr</span><span class="o">/</span><span class="n">total</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span>
 
-<span class="n">data_path</span> <span class="o">=</span> <span class="s2">&quot;./data/&quot;</span>
-<span class="n">filenames</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">data_path</span><span class="p">)[</span><span class="o">-</span><span class="mi">10</span><span class="p">:]</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
-    <span class="n">print_percent</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">),</span> <span class="mf">0.01</span><span class="p">)</span>
-    <span class="n">curr_file</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="n">data_path</span><span class="o">+</span><span class="n">filename</span><span class="p">)</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">curr_file</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">load_and_preprocess</span><span class="p">(</span><span class="n">load_percent</span><span class="p">):</span>
+    <span class="n">userdata</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s2">&quot;historical-users-filtered.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">explode</span><span class="p">(</span><span class="s1">&#39;accounts&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span><span class="n">row</span> <span class="ow">in</span> <span class="n">userdata</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">userdata</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;accounts&#39;</span><span class="p">][</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+        <span class="n">userdata</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="s1">&#39;screen_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;accounts&#39;</span><span class="p">][</span><span class="s1">&#39;screen_name&#39;</span><span class="p">]</span>
+        <span class="n">userdata</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="s1">&#39;account_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;accounts&#39;</span><span class="p">][</span><span class="s1">&#39;account_type&#39;</span><span class="p">]</span>
+    <span class="n">userdata</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">userdata</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int64&#39;</span><span class="p">)</span>
+        
+    <span class="n">data_path</span> <span class="o">=</span> <span class="s2">&quot;./data/&quot;</span>
+    <span class="n">filenames</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>
+    <span class="n">filenames</span> <span class="o">=</span> <span class="n">filenames</span><span class="p">[</span><span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">)</span><span class="o">*</span><span class="n">load_percent</span><span class="p">):]</span>
+    <span class="n">file_contents</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
+        <span class="n">print_percent</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">),</span> <span class="mf">0.001</span><span class="p">,</span> <span class="s1">&#39;Data Loading Progress&#39;</span><span class="p">)</span>
+        <span class="n">curr_file</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="n">data_path</span><span class="o">+</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">file_contents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">curr_file</span><span class="p">)</span>
+        
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">file_contents</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">combined_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">userdata</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;user_id&#39;</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+    <span class="n">combined_df</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">combined_df</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">combined_df</span>
+    
+<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">print_percent</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="mf">0.001</span><span class="p">,</span> <span class="s1">&#39;Sentiment Score Progress&#39;</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="s2">&quot;sentiment_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TextBlob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]))</span><span class="o">.</span><span class="n">sentiment</span><span class="o">.</span><span class="n">polarity</span>
+
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;mentions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;@\w+&#39;</span><span class="p">))</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;hashtags&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;#\w+&#39;</span><span class="p">))</span>
+    
+    <span class="c1"># Regex for URL was sourced from https://uibakery.io/regex-library/url-regex-python</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;urls&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;https?:</span><span class="se">\\</span><span class="s2">/</span><span class="se">\\</span><span class="s2">/(?:www</span><span class="se">\\</span><span class="s2">.)?[-a-zA-Z0-9@:%._</span><span class="se">\\</span><span class="s2">+~#=]{1,256}</span><span class="se">\\</span><span class="s2">.[a-zA-Z0-9()]{1,6}</span><span class="se">\\</span><span class="s2">b(?:[-a-zA-Z0-9()@:%_</span><span class="se">\\</span><span class="s2">+.~#?&amp;</span><span class="se">\\</span><span class="s2">/=]*)&quot;</span><span class="p">))</span> 
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;urls&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">[</span><span class="n">urlparse</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">])</span>
+    
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;domains&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">netloc</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;.&#39;</span><span class="o">+</span><span class="n">i</span><span class="o">.</span><span class="n">netloc</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;(?:@\w+|#\w+|https?:</span><span class="se">\\</span><span class="s1">/</span><span class="se">\\</span><span class="s1">/(?:www</span><span class="se">\\</span><span class="s1">.)?[-a-zA-Z0-9@:%._</span><span class="se">\\</span><span class="s1">+~#=]{1,256}</span><span class="se">\\</span><span class="s1">.[a-zA-Z0-9()]{1,6}</span><span class="se">\\</span><span class="s1">b(?:[-a-zA-Z0-9()@:%_</span><span class="se">\\</span><span class="s1">+.~#?&amp;</span><span class="se">\\</span><span class="s1">/=]*))&#39;</span><span class="p">),</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">df</span>
+
+
+<span class="k">def</span> <span class="nf">gen_training_groups</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">training_size</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">):</span>
+    <span class="n">party_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">training_size</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+    
+    <span class="n">dems</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">party_size</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
+    <span class="n">reps</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;R&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">party_size</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
+    
+    <span class="n">training_small</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">dems</span><span class="p">,</span> <span class="n">reps</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="n">training_small</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">training_small</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span>
+    
+    <span class="k">return</span>  <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="n">test_ratio</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">blacklist</span><span class="p">):</span>
+    <span class="n">r_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;R&#39;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">explode</span><span class="p">()</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+    <span class="n">r_series</span> <span class="o">=</span> <span class="n">r_series</span><span class="p">[</span><span class="n">r_series</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">]</span>
+    <span class="n">r_series</span> <span class="o">=</span> <span class="n">r_series</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">&quot;r_occurances&quot;</span><span class="p">)</span>
+
+    <span class="n">d_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">explode</span><span class="p">()</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+    <span class="n">d_series</span> <span class="o">=</span> <span class="n">d_series</span><span class="p">[</span><span class="n">d_series</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">]</span>
+    <span class="n">d_series</span> <span class="o">=</span> <span class="n">d_series</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">&quot;d_occurances&quot;</span><span class="p">)</span>
+
+    <span class="n">rd_combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">r_series</span><span class="p">,</span><span class="n">d_series</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;r_occurances&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;r_occurances&#39;</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">d_series</span><span class="o">.</span><span class="n">size</span> <span class="o">/</span> <span class="n">r_series</span><span class="o">.</span><span class="n">size</span> <span class="p">)</span>
+    <span class="n">rd_combined</span> <span class="o">=</span> <span class="n">rd_combined</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;total&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;r_occurances&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;d_occurances&#39;</span><span class="p">]</span>
+    <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;log_total&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;total&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;raw_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;d_occurances&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;r_occurances&#39;</span><span class="p">]</span>
+    <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;raw_score&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;total&#39;</span><span class="p">])</span><span class="o">*</span><span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;log_total&#39;</span><span class="p">]</span>
+    
+    <span class="n">df</span> <span class="o">=</span> <span class="n">score_occurance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;score&#39;</span><span class="p">],</span> <span class="n">blacklist</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">rd_combined</span><span class="p">[</span><span class="s1">&#39;score&#39;</span><span class="p">]</span>
+    
+
+<span class="k">def</span> <span class="nf">score_occurance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">,</span> <span class="n">blacklist</span><span class="p">):</span>
+    <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="o">+</span><span class="s1">&#39;_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">print_percent</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="mf">0.001</span><span class="p">,</span> <span class="n">col</span><span class="o">+</span><span class="s1">&#39; scoring progress&#39;</span><span class="p">)</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="n">col</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="ow">in</span> <span class="n">item_scores</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">blacklist</span><span class="p">):</span>
+                <span class="n">total</span> <span class="o">+=</span> <span class="n">item_scores</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="n">col</span><span class="o">+</span><span class="s1">&#39;_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="k">def</span> <span class="nf">lda_train</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="n">count_vector</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">max_df</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stop_words</span><span class="o">=</span><span class="s1">&#39;english&#39;</span><span class="p">)</span>
+    <span class="n">terms</span> <span class="o">=</span> <span class="n">count_vector</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">))</span>
+
+    <span class="n">lda_component_num</span> <span class="o">=</span> <span class="mi">40</span>
+    <span class="n">lda_model</span> <span class="o">=</span> <span class="n">LatentDirichletAllocation</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
+    <span class="n">lda_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">terms</span><span class="p">)</span>
+    <span class="n">topic_values</span> <span class="o">=</span> <span class="n">lda_model</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">terms</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">topic_values</span>
+
+<span class="k">def</span> <span class="nf">lda_predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">):</span>
+    <span class="n">topic_values</span> <span class="o">=</span> <span class="n">count_vector</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">lda_model</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">topic_values</span><span class="p">)</span>
+    
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">X_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;party&quot;</span><span class="p">})</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning processing...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning occurance scoring...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">mention_item_scores</span> <span class="o">=</span> <span class="n">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;mentions&#39;</span><span class="p">,[])</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">domain_item_scores</span><span class="o">=</span> <span class="n">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;domains&#39;</span><span class="p">,[])</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">hastag_item_scores</span> <span class="o">=</span> <span class="n">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;hashtags&#39;</span><span class="p">,[])</span>
+    <span class="n">item_scores</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;mentions&#39;</span><span class="p">:</span><span class="n">mention_item_scores</span><span class="p">,</span><span class="s1">&#39;domains&#39;</span><span class="p">:</span><span class="n">domain_item_scores</span><span class="p">,</span><span class="s1">&#39;hashtags&#39;</span><span class="p">:</span><span class="n">hastag_item_scores</span><span class="p">}</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning LDA model training ...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">topic_values</span> <span class="o">=</span> <span class="n">lda_train</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">topic_values_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">topic_values</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">40</span><span class="p">))</span>
+    
+    
+    <span class="n">X_train_scores</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;mentions_score&#39;</span><span class="p">,</span><span class="s1">&#39;domains_score&#39;</span><span class="p">,</span><span class="s1">&#39;hashtags_score&#39;</span><span class="p">]]</span>
+    <span class="n">X_train_scores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">X_train_scores</span><span class="p">,</span><span class="n">topic_values_df</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning classification model training ...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">classification_model</span> <span class="o">=</span> <span class="n">RandomForestClassifier</span><span class="p">()</span>
+    <span class="n">classification_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_scores</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span>
+
+<span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning processing...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning occurance scoring...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">score_occurance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;mentions&#39;</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">[</span><span class="s1">&#39;mentions&#39;</span><span class="p">],</span> <span class="p">[])</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">score_occurance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;domains&#39;</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">[</span><span class="s1">&#39;domains&#39;</span><span class="p">],</span> <span class="p">[])</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">score_occurance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;hashtags&#39;</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">[</span><span class="s1">&#39;hashtags&#39;</span><span class="p">],</span> <span class="p">[])</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning LDA predicting ...</span><span class="se">\t\t\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">topic_values</span> <span class="o">=</span> <span class="n">lda_predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">)</span>
+    <span class="n">topic_values_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">topic_values</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">40</span><span class="p">))</span>
+    
+    <span class="n">X_predict_scores</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;mentions_score&#39;</span><span class="p">,</span><span class="s1">&#39;domains_score&#39;</span><span class="p">,</span><span class="s1">&#39;hashtags_score&#39;</span><span class="p">]]</span>
+    <span class="n">X_predict_scores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">X_predict_scores</span><span class="p">,</span><span class="n">topic_values_df</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning classification predicting ...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">classification_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_predict_scores</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">predictions</span>
+    
+    
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[76]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unscored_set</span> <span class="o">=</span> <span class="n">load_and_preprocess</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14607,189 +14785,8 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>Progress: 0.9000</pre>
+<pre>Data Loading Progress: 0.995			</pre>
 </div>
-</div>
-
-</div>
-
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[39]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[39]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>screen_name</th>
-      <th>user_id</th>
-      <th>time</th>
-      <th>link</th>
-      <th>text</th>
-      <th>source</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1598542641771458560</td>
-      <td>RepSwalwell</td>
-      <td>942156122</td>
-      <td>2022-12-02T00:00:39-05:00</td>
-      <td>https://www.twitter.com/RepSwalwell/statuses/1...</td>
-      <td>LOLOLOLOL\n\nYou don’t get to invite the arson...</td>
-      <td>Twitter for iPhone</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>1598556734087372800</td>
-      <td>chiproytx</td>
-      <td>1257667158</td>
-      <td>2022-12-02T00:56:39-05:00</td>
-      <td>https://www.twitter.com/chiproytx/statuses/159...</td>
-      <td>Strike “votes on” and replace with “passes” an...</td>
-      <td>Twitter for iPad</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>1598553716939948032</td>
-      <td>RitchieTorres</td>
-      <td>1247612029</td>
-      <td>2022-12-02T00:44:40-05:00</td>
-      <td>https://www.twitter.com/RitchieTorres/statuses...</td>
-      <td>RT @RitchieTorres The Ritchie Torres doctrine,...</td>
-      <td>Twitter for Android</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>1598549998203015168</td>
-      <td>RitchieTorres</td>
-      <td>1247612029</td>
-      <td>2022-12-02T00:29:53-05:00</td>
-      <td>https://www.twitter.com/RitchieTorres/statuses...</td>
-      <td>RT @RitchieTorres Shocked beyond words.\nNow w...</td>
-      <td>Twitter for Android</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1598546552410492928</td>
-      <td>RepKarenBass</td>
-      <td>239949176</td>
-      <td>2022-12-02T00:16:12-05:00</td>
-      <td>https://www.twitter.com/RepKarenBass/statuses/...</td>
-      <td>The One Stop Shop Community Reentry Program Ac...</td>
-      <td>Twitter for iPhone</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>17414</th>
-      <td>1602154754800582656</td>
-      <td>JoaquinCastrotx</td>
-      <td>231510077</td>
-      <td>2022-12-11T23:13:54-05:00</td>
-      <td>https://www.twitter.com/JoaquinCastrotx/status...</td>
-      <td>Congratulations to @KarenBassLA on becoming th...</td>
-      <td>Twitter for iPhone</td>
-    </tr>
-    <tr>
-      <th>17415</th>
-      <td>1602154092079489024</td>
-      <td>RepMeijer</td>
-      <td>1334164871420796928</td>
-      <td>2022-12-11T23:11:16-05:00</td>
-      <td>https://www.twitter.com/RepMeijer/statuses/160...</td>
-      <td>@guypbenson Give S2 a chance</td>
-      <td>Twitter for iPhone</td>
-    </tr>
-    <tr>
-      <th>17416</th>
-      <td>1602152788355649536</td>
-      <td>chiproytx</td>
-      <td>1257667158</td>
-      <td>2022-12-11T23:06:05-05:00</td>
-      <td>https://www.twitter.com/borderObserver/statuse...</td>
-      <td>RT @borderObserver Collaborative efforts shut ...</td>
-      <td>Twitter for iPad</td>
-    </tr>
-    <tr>
-      <th>17417</th>
-      <td>1602152360540766208</td>
-      <td>SenatorHassan</td>
-      <td>946549322</td>
-      <td>2022-12-11T23:04:23-05:00</td>
-      <td>https://www.twitter.com/SenatorHassan/statuses...</td>
-      <td>Found a pleasant surprise when I took Chip out...</td>
-      <td>Twitter for iPhone</td>
-    </tr>
-    <tr>
-      <th>17418</th>
-      <td>1602151821098860544</td>
-      <td>RitchieTorres</td>
-      <td>1247612029</td>
-      <td>2022-12-11T23:02:15-05:00</td>
-      <td>https://www.twitter.com/RitchieTorres/statuses...</td>
-      <td>We're not going to leave it to the forces of h...</td>
-      <td>Twitter for Android</td>
-    </tr>
-  </tbody>
-</table>
-<p>17419 rows × 7 columns</p>
-</div>
-</div>
-
 </div>
 
 </div>
@@ -14801,32 +14798,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[40]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[77]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">textblob</span> <span class="kn">import</span> <span class="n">TextBlob</span>
-
-<span class="n">df</span><span class="p">[</span><span class="s2">&quot;sentiment_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">TextBlob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">sentiment</span><span class="o">.</span><span class="n">polarity</span><span class="p">)</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[51]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
-
-<span class="n">df</span><span class="p">[</span><span class="s1">&#39;mentions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;@\w+&#39;</span><span class="p">))</span>
-<span class="n">df</span><span class="p">[</span><span class="s1">&#39;hashtags&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;#\w+&#39;</span><span class="p">))</span>
-<span class="n">df</span><span class="p">[</span><span class="s1">&#39;urls&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;http[^\s-]+&#39;</span><span class="p">))</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">gen_training_groups</span><span class="p">(</span><span class="n">unscored_set</span><span class="p">,</span> <span class="mi">100000</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14839,10 +14814,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[52]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[78]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;sentiment_score&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">scored_set</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span> <span class="o">=</span> <span class="n">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14860,203 +14835,16 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[52]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 
 
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>screen_name</th>
-      <th>user_id</th>
-      <th>time</th>
-      <th>link</th>
-      <th>text</th>
-      <th>source</th>
-      <th>sentiment_score</th>
-      <th>mentions</th>
-      <th>hashtags</th>
-      <th>urls</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>17231</th>
-      <td>1602087396794941440</td>
-      <td>AyannaPressley</td>
-      <td>31013444</td>
-      <td>2022-12-11T18:46:15-05:00</td>
-      <td>https://www.twitter.com/DebtCrisisOrg/statuses...</td>
-      <td>RT @DebtCrisisOrg Every win we’ve seen is proo...</td>
-      <td>Twitter for iPhone</td>
-      <td>1.0</td>
-      <td>[@DebtCrisisOrg]</td>
-      <td>[#CancelStudentDebt]</td>
-      <td>[]</td>
-    </tr>
-    <tr>
-      <th>2708</th>
-      <td>1599149795473440768</td>
-      <td>SenGaryPeters</td>
-      <td>236511574</td>
-      <td>2022-12-03T16:13:16-05:00</td>
-      <td>https://www.twitter.com/SenGaryPeters/statuses...</td>
-      <td>It was a pleasure to meet with the student lea...</td>
-      <td>Twitter Web App</td>
-      <td>1.0</td>
-      <td>[]</td>
-      <td>[]</td>
-      <td>[http://pbs.twimg.com/media/FjFR]</td>
-    </tr>
-    <tr>
-      <th>4132</th>
-      <td>1599803563139399680</td>
-      <td>ReverendWarnock</td>
-      <td>1221242033530195968</td>
-      <td>2022-12-05T11:31:07-05:00</td>
-      <td>https://www.twitter.com/ReverendWarnock/status...</td>
-      <td>When @Teamsters vote, workers win! http://pbs....</td>
-      <td>Twitter for iPhone</td>
-      <td>1.0</td>
-      <td>[@Teamsters]</td>
-      <td>[]</td>
-      <td>[http://pbs.twimg.com/media/FjOk2WOWIAAtaEo.jp...</td>
-    </tr>
-    <tr>
-      <th>2701</th>
-      <td>1599152221395951616</td>
-      <td>RogerMarshallMD</td>
-      <td>1240107944</td>
-      <td>2022-12-03T16:22:55-05:00</td>
-      <td>https://www.twitter.com/RogerMarshallMD/status...</td>
-      <td>Ty Zentner in overtime for the win! Transfer f...</td>
-      <td>Twitter for iPhone</td>
-      <td>1.0</td>
-      <td>[]</td>
-      <td>[]</td>
-      <td>[]</td>
-    </tr>
-    <tr>
-      <th>16130</th>
-      <td>1601612054221099008</td>
-      <td>VoteMarsha</td>
-      <td>63150856</td>
-      <td>2022-12-10T11:17:24-05:00</td>
-      <td>https://www.twitter.com/VoteMarsha/statuses/16...</td>
-      <td>Happy Birthday @RonGant! Thankful for your com...</td>
-      <td>Sprout Social</td>
-      <td>1.0</td>
-      <td>[@RonGant]</td>
-      <td>[]</td>
-      <td>[http://pbs.twimg.com/media/FjoRqI5XgAQxasE.jpg]</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>2076</th>
-      <td>1598908971103842304</td>
-      <td>RepRickLarsen</td>
-      <td>404132211</td>
-      <td>2022-12-03T00:16:19-05:00</td>
-      <td>https://www.twitter.com/RepRickLarsen/statuses...</td>
-      <td>On this week's #RecapWithRick ⬇️\n\n🎄 @USCapit...</td>
-      <td>Twitter Media Studio</td>
-      <td>-1.0</td>
-      <td>[@USCapitolTree, @cityofmlt, @WWU_WSoccer]</td>
-      <td>[#RecapWithRick, #USMNT]</td>
-      <td>[http://pbs.twimg.com/amplify_video_thumb/1598...</td>
-    </tr>
-    <tr>
-      <th>9480</th>
-      <td>1600537952232390656</td>
-      <td>SenatorBraun</td>
-      <td>1080870981877534720</td>
-      <td>2022-12-07T12:09:19-05:00</td>
-      <td>https://www.twitter.com/SenatorBraun/statuses/...</td>
-      <td>It's been 81 years since the devastation at Pe...</td>
-      <td>Twitter Web App</td>
-      <td>-1.0</td>
-      <td>[]</td>
-      <td>[]</td>
-      <td>[http://pbs.twimg.com/media/FjZAC_0WIAQ7sk3.jpg]</td>
-    </tr>
-    <tr>
-      <th>9932</th>
-      <td>1600566943441981440</td>
-      <td>RepWesterman</td>
-      <td>2852998461</td>
-      <td>2022-12-07T14:04:31-05:00</td>
-      <td>https://www.twitter.com/RepWesterman/statuses/...</td>
-      <td>This is horrific. \n\nPresident Biden must ans...</td>
-      <td>Twitter Web App</td>
-      <td>-1.0</td>
-      <td>[]</td>
-      <td>[]</td>
-      <td>[https://www.washingtonexaminer.com/news/border]</td>
-    </tr>
-    <tr>
-      <th>266</th>
-      <td>1598680171095138304</td>
-      <td>RepBonnie</td>
-      <td>2968451607</td>
-      <td>2022-12-02T09:07:09-05:00</td>
-      <td>https://www.twitter.com/USProgressives/statuse...</td>
-      <td>RT @USProgressives Today, 43 Senate Republican...</td>
-      <td>Twitter Web App</td>
-      <td>-1.0</td>
-      <td>[@USProgressives]</td>
-      <td>[]</td>
-      <td>[]</td>
-    </tr>
-    <tr>
-      <th>1718</th>
-      <td>1598821218026766336</td>
-      <td>timburchett</td>
-      <td>353890966</td>
-      <td>2022-12-02T18:27:37-05:00</td>
-      <td>https://www.twitter.com/timburchett/statuses/1...</td>
-      <td>Don’t put that evil on me Ricky Bobbie. https:...</td>
-      <td>Twitter for iPhone</td>
-      <td>-1.0</td>
-      <td>[@JohnDrLovell, @timburchett]</td>
-      <td>[]</td>
-      <td>[https://twitter.com/johndrlovell/status/15988...</td>
-    </tr>
-  </tbody>
-</table>
-<p>17419 rows × 11 columns</p>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
+<pre>Beginning processing...		
+Beginning occurance scoring...				
+Beginning LDA model training ...			
+Beginning classification model training ...		
+</pre>
 </div>
-</div>
-
 </div>
 
 </div>
@@ -15068,10 +14856,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[47]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[79]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;screen_name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;sentiment_score&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">predictions</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -15089,113 +14877,16 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[47]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 
 
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>user_id</th>
-      <th>sentiment_score</th>
-    </tr>
-    <tr>
-      <th>screen_name</th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>ThomTillis</th>
-      <td>1.600226e+18</td>
-      <td>2.219544e+07</td>
-      <td>1.000000</td>
-    </tr>
-    <tr>
-      <th>RepJackBergman</th>
-      <td>1.601306e+18</td>
-      <td>8.152416e+17</td>
-      <td>1.000000</td>
-    </tr>
-    <tr>
-      <th>troyc4Congress</th>
-      <td>1.599409e+18</td>
-      <td>1.858300e+07</td>
-      <td>1.000000</td>
-    </tr>
-    <tr>
-      <th>RepOHalleran</th>
-      <td>1.600582e+18</td>
-      <td>8.084167e+17</td>
-      <td>0.800000</td>
-    </tr>
-    <tr>
-      <th>JasonCrowCO</th>
-      <td>1.601268e+18</td>
-      <td>8.514773e+17</td>
-      <td>0.717614</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>RepMcClintock</th>
-      <td>1.598738e+18</td>
-      <td>5.015244e+07</td>
-      <td>-0.188889</td>
-    </tr>
-    <tr>
-      <th>DavidKustoff</th>
-      <td>1.600534e+18</td>
-      <td>3.173862e+08</td>
-      <td>-0.200000</td>
-    </tr>
-    <tr>
-      <th>DHarshbargerTN1</th>
-      <td>1.599604e+18</td>
-      <td>1.237911e+18</td>
-      <td>-0.226389</td>
-    </tr>
-    <tr>
-      <th>Troy_Balderson</th>
-      <td>1.601053e+18</td>
-      <td>6.030832e+08</td>
-      <td>-0.363393</td>
-    </tr>
-    <tr>
-      <th>jbletlow</th>
-      <td>1.600679e+18</td>
-      <td>1.903979e+07</td>
-      <td>-0.375000</td>
-    </tr>
-  </tbody>
-</table>
-<p>859 rows × 3 columns</p>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
+<pre>Beginning processing...		
+Beginning occurance scoring...				
+Beginning LDA predicting ...							
+Beginning classification predicting ...		
+</pre>
 </div>
-</div>
-
 </div>
 
 </div>
@@ -15207,10 +14898,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[60]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[80]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">1718</span><span class="p">]</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -15228,24 +14919,13 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[60]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[80]:</div>
 
 
 
 
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
-<pre>id                                               1598821218026766336
-screen_name                                              timburchett
-user_id                                                    353890966
-time                                       2022-12-02T18:27:37-05:00
-link               https://www.twitter.com/timburchett/statuses/1...
-text               Don’t put that evil on me Ricky Bobbie. https:...
-source                                            Twitter for iPhone
-sentiment_score                                                 -1.0
-mentions                               [@JohnDrLovell, @timburchett]
-hashtags                                                          []
-urls               [https://twitter.com/johndrlovell/status/15988...
-Name: 1718, dtype: object</pre>
+<pre>0.8169333333333333</pre>
 </div>
 
 </div>
@@ -15254,20 +14934,317 @@ Name: 1718, dtype: object</pre>
 
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[69]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unscored_set</span>
 </pre></div>
 
      </div>
 </div>
 </div>
+</div>
+
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+
+<div class="jp-OutputArea-child">
+
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[69]:</div>
+
+
+
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id_x</th>
+      <th>screen_name_x</th>
+      <th>user_id</th>
+      <th>time</th>
+      <th>link</th>
+      <th>text</th>
+      <th>source</th>
+      <th>index</th>
+      <th>name</th>
+      <th>chamber</th>
+      <th>type</th>
+      <th>party</th>
+      <th>accounts</th>
+      <th>id_y</th>
+      <th>state</th>
+      <th>prev_props</th>
+      <th>screen_name_y</th>
+      <th>account_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1527513997544722432</td>
+      <td>laurenboebert</td>
+      <td>1201670995435646976</td>
+      <td>2022-05-20 00:58:11-04:00</td>
+      <td>https://www.twitter.com/laurenboebert/statuses...</td>
+      <td>When President Trump wanted to spend $25 billi...</td>
+      <td>Twitter for iPhone</td>
+      <td>151.0</td>
+      <td>Lauren Boebert</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'id': '1201670995435646976', 'screen_name': '...</td>
+      <td>{'bioguide': 'B000825', 'govtrack': 456805}</td>
+      <td>CO</td>
+      <td>NaN</td>
+      <td>laurenboebert</td>
+      <td>campaign</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1527506719605235712</td>
+      <td>AdamKinzinger</td>
+      <td>18004222</td>
+      <td>2022-05-20 00:29:16-04:00</td>
+      <td>https://www.twitter.com/AdamKinzinger/statuses...</td>
+      <td>Give #Ukraine the F16…. https://twitter.com/dk...</td>
+      <td>Twitter for iPhone</td>
+      <td>237.0</td>
+      <td>Adam Kinzinger</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'id': '18004222', 'screen_name': 'AdamKinzing...</td>
+      <td>{'bioguide': 'K000378', 'govtrack': 412421}</td>
+      <td>IL</td>
+      <td>NaN</td>
+      <td>AdamKinzinger</td>
+      <td>campaign</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1527505795532955648</td>
+      <td>WarrenDavidson</td>
+      <td>742735530287304704</td>
+      <td>2022-05-20 00:25:35-04:00</td>
+      <td>https://www.twitter.com/WarrenDavidson/statuse...</td>
+      <td>@Jestopher_BTC @Melt_Dem @PeterMcCormack @SolG...</td>
+      <td>Twitter for iPhone</td>
+      <td>482.0</td>
+      <td>Warren Davidson</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'id': '742735530287304704', 'screen_name': 'W...</td>
+      <td>{'bioguide': 'D000626', 'govtrack': 412675}</td>
+      <td>OH</td>
+      <td>NaN</td>
+      <td>WarrenDavidson</td>
+      <td>office</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1527504983909974016</td>
+      <td>NikemaWilliams</td>
+      <td>36424664</td>
+      <td>2022-05-20 00:22:22-04:00</td>
+      <td>https://www.twitter.com/NikemaWilliams/statuse...</td>
+      <td>@caitlinhighland @GaBudget I’m a Future Now Al...</td>
+      <td>Twitter for iPhone</td>
+      <td>215.0</td>
+      <td>Nikema Williams</td>
+      <td>house</td>
+      <td>member</td>
+      <td>D</td>
+      <td>{'id': '36424664', 'screen_name': 'NikemaWilli...</td>
+      <td>{'bioguide': 'W000788', 'govtrack': 456811}</td>
+      <td>GA</td>
+      <td>NaN</td>
+      <td>NikemaWilliams</td>
+      <td>campaign</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1527502998435504128</td>
+      <td>claudiatenney</td>
+      <td>756285384</td>
+      <td>2022-05-20 00:14:29-04:00</td>
+      <td>https://www.twitter.com/bennyjohnson/statuses/...</td>
+      <td>RT @bennyjohnson Pro-Life mom ends the career ...</td>
+      <td>Twitter for iPhone</td>
+      <td>434.0</td>
+      <td>Claudia Tenney</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'id': '756285384', 'screen_name': 'claudiaten...</td>
+      <td>{'bioguide': 'T000478', 'govtrack': 412720}</td>
+      <td>NY</td>
+      <td>NaN</td>
+      <td>claudiatenney</td>
+      <td>campaign</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>450250</th>
+      <td>1602154754800582656</td>
+      <td>JoaquinCastrotx</td>
+      <td>231510077</td>
+      <td>2022-12-11 23:13:54-05:00</td>
+      <td>https://www.twitter.com/JoaquinCastrotx/status...</td>
+      <td>Congratulations to @KarenBassLA on becoming th...</td>
+      <td>Twitter for iPhone</td>
+      <td>568.0</td>
+      <td>Joaquin Castro</td>
+      <td>house</td>
+      <td>member</td>
+      <td>D</td>
+      <td>{'id': '231510077', 'screen_name': 'JoaquinCas...</td>
+      <td>{'bioguide': 'C001091', 'govtrack': 412576}</td>
+      <td>TX</td>
+      <td>NaN</td>
+      <td>JoaquinCastrotx</td>
+      <td>office</td>
+    </tr>
+    <tr>
+      <th>450251</th>
+      <td>1602154092079489024</td>
+      <td>RepMeijer</td>
+      <td>1334164871420796928</td>
+      <td>2022-12-11 23:11:16-05:00</td>
+      <td>https://www.twitter.com/RepMeijer/statuses/160...</td>
+      <td>@guypbenson Give S2 a chance</td>
+      <td>Twitter for iPhone</td>
+      <td>336.0</td>
+      <td>Peter Meijer</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'screen_name': 'RepMeijer', 'id': '1334164871...</td>
+      <td>{'bioguide': 'M001186', 'govtrack': 456826}</td>
+      <td>MI</td>
+      <td>NaN</td>
+      <td>RepMeijer</td>
+      <td>office</td>
+    </tr>
+    <tr>
+      <th>450252</th>
+      <td>1602152788355649536</td>
+      <td>chiproytx</td>
+      <td>1257667158</td>
+      <td>2022-12-11 23:06:05-05:00</td>
+      <td>https://www.twitter.com/borderObserver/statuse...</td>
+      <td>RT @borderObserver Collaborative efforts shut ...</td>
+      <td>Twitter for iPad</td>
+      <td>558.0</td>
+      <td>Chip Roy</td>
+      <td>house</td>
+      <td>member</td>
+      <td>R</td>
+      <td>{'account_type': 'campaign', 'screen_name': 'c...</td>
+      <td>{'bioguide': 'R000614', 'govtrack': 412826}</td>
+      <td>TX</td>
+      <td>NaN</td>
+      <td>chiproytx</td>
+      <td>campaign</td>
+    </tr>
+    <tr>
+      <th>450253</th>
+      <td>1602152360540766208</td>
+      <td>SenatorHassan</td>
+      <td>946549322</td>
+      <td>2022-12-11 23:04:23-05:00</td>
+      <td>https://www.twitter.com/SenatorHassan/statuses...</td>
+      <td>Found a pleasant surprise when I took Chip out...</td>
+      <td>Twitter for iPhone</td>
+      <td>757.0</td>
+      <td>Maggie Hassan</td>
+      <td>senate</td>
+      <td>member</td>
+      <td>D</td>
+      <td>{'id': '946549322', 'screen_name': 'SenatorHas...</td>
+      <td>{'bioguide': 'H001076', 'govtrack': 412680}</td>
+      <td>NH</td>
+      <td>NaN</td>
+      <td>SenatorHassan</td>
+      <td>office</td>
+    </tr>
+    <tr>
+      <th>450254</th>
+      <td>1602151821098860544</td>
+      <td>RitchieTorres</td>
+      <td>1247612029</td>
+      <td>2022-12-11 23:02:15-05:00</td>
+      <td>https://www.twitter.com/RitchieTorres/statuses...</td>
+      <td>We're not going to leave it to the forces of h...</td>
+      <td>Twitter for Android</td>
+      <td>458.0</td>
+      <td>Ritchie Torres</td>
+      <td>house</td>
+      <td>member</td>
+      <td>D</td>
+      <td>{'id': '1247612029', 'screen_name': 'RitchieTo...</td>
+      <td>{'bioguide': 'T000486', 'govtrack': 456838}</td>
+      <td>NY</td>
+      <td>NaN</td>
+      <td>RitchieTorres</td>
+      <td>campaign</td>
+    </tr>
+  </tbody>
+</table>
+<p>450255 rows × 18 columns</p>
+</div>
+</div>
+
+</div>
+
+</div>
+
 </div>
 
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
