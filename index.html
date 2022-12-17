@@ -14561,12 +14561,35 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     </script>
     <!-- End of mathjax configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h1 id="Government-Tweets-and-Their-Author's-Political-Alignment">Government Tweets and Their Author's Political Alignment<a class="anchor-link" href="#Government-Tweets-and-Their-Author's-Political-Alignment">&#182;</a></h1><p><em>By Beckett Welles</em></p>
+<h2 id="The-Intro:">The Intro:<a class="anchor-link" href="#The-Intro:">&#182;</a></h2><p>Welcome to my final project for CMSC320: Intro to Data Science. This project will act as a tutorial and walk you through what I’m trying to accomplish, how I’m attempting to do it, and what my results are.</p>
+<h2 id="The-Goal:">The Goal:<a class="anchor-link" href="#The-Goal:">&#182;</a></h2><p>The goal of this project is to create a model that can predict the political alignment of a government representative’s tweet. This means for a given random tweet from a congressperson or representative, this model should be able to predict the political alignment of the government official that tweeted it. This prediction will be based on a few attributes of the tweet. Firstly, depending on the user mentions, hashtags used, and external linked websites contained within the tweet we can begin to infer the political party. Next, we will use topic modeling to identify commonly discussed topics in the tweets, and find which topics are most discussed by each side. The final attribute being considered is the overall sentiment of the tweet, whether positive or negative. The bulk of this tutorial will involve extracting these attributes from the text of the tweets alone. Through this tutorial we will be trying to either prove or disprove the following hypothesis and null hypothesis:</p>
+<p><strong>Hypothesis</strong>: Using only the text of a government official's tweet, we will be able to predict better than guessing the political affiliation of the government official.</p>
+<p><strong>Null Hypothesis</strong>: Using only the text of a government official's tweet, we will not be able to predict better than guessing the political affiliation of the government official.</p>
+<h2 id="The-Data:">The Data:<a class="anchor-link" href="#The-Data:">&#182;</a></h2><p>Before beginning any kind of analysis, it’s extremely important to understand the data we will be working with. I will primarily be using data from <a href="https://github.com/alexlitel/congresstweets">https://github.com/alexlitel/congresstweets</a>. This page has around five years' worth of tweets from over 1,000 Twitter accounts that are associated with political figures. This database contains not only the tweet, but also the account it’s from, the timestamp, and some additional metadata. For the purposes of this model, we will exclusively be using the text of the tweets themselves for prediction purposes. What this database notably does not contain however, is the political alignment of the Twitter user. For this information, I used an additional dataset database from the same creator, which contains information about the Twitter accounts featured in the first dataset. This second dataset can be found here: <a href="https://github.com/alexlitel/congresstweets-automator/">https://github.com/alexlitel/congresstweets-automator/</a>. When we combine these two datasets together, we are able to get a list of over 4 million tweets that have corresponding political alignments, on which we can train or model.</p>
+
+</div>
+</div>
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h1 id="The-Code">The Code<a class="anchor-link" href="#The-Code">&#182;</a></h1><p>The code block below represents the beginning of creating our model. In this we begin by not only importing all the libraries and functions that we will need for our code to run, but we also define a helper method <em>print_percent</em>. This method is helpful as many of the operations contained within the model are slow, so a function like this one helps us see how different phases are progressing.</p>
+<h3 id="load_and_preprocess()">load_and_preprocess()<a class="anchor-link" href="#load_and_preprocess()">&#182;</a></h3><p>After this, we have the function <em>load_and_preprocess</em>. As its name suggests, the purpose of this function is to load both of datasets into memory. Additionally, this method also combines them as I described above, so that each tweet in the tweet database is given a corresponding political alignment.</p>
+<p>Databases can come in a lot of different forms. The database containing the tweets in this case came as a folder full of JSON files. So in cases like this we simply iterate through the files, loading them one at a time and combining them. For this model specifically, I added an adjustable limiter on the number of files that loads. This is because the model is too slow for me to reasonably train on the entire dataset, and to speed things up I only load about as much as I need.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[70]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[91]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
@@ -14582,12 +14605,8 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">mean_squared_error</span><span class="p">,</span> <span class="n">mean_absolute_error</span>
 <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">preprocessing</span>
 <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
-<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">svm</span>
 <span class="kn">from</span> <span class="nn">sklearn.ensemble</span> <span class="kn">import</span> <span class="n">RandomForestClassifier</span>
-<span class="kn">from</span> <span class="nn">sklearn.neighbors</span> <span class="kn">import</span> <span class="n">KNeighborsClassifier</span>
-<span class="kn">from</span> <span class="nn">sklearn.tree</span> <span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
 
-<span class="c1"># https://github.com/alexlitel/congresstweets</span>
 
 <span class="k">def</span> <span class="nf">print_percent</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span><span class="n">total</span><span class="p">,</span><span class="n">gran</span><span class="p">,</span><span class="n">title</span><span class="p">):</span>
     <span class="n">delta</span><span class="o">=</span><span class="n">gran</span><span class="o">*</span><span class="n">total</span>
@@ -14618,8 +14637,32 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     <span class="n">combined_df</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">combined_df</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">])</span>
     
     <span class="k">return</span> <span class="n">combined_df</span>
-    
-<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="process()">process()<a class="anchor-link" href="#process()">&#182;</a></h2><p>Like any dataset, this one needs a lot of processing before it can be used in the model. This function is where we begin to extract the attributes that we will use to predict its political alignment.</p>
+<p>The first attribute we pull out of the tweets is the sentiment score. Sentiment analysis is a form of natural language processing, where the model tries to evaluate the overall attitude/sentiment of the text. A very positive and happy seeming tweet would get a score of 1, while a negative and pessimistic tweet would get a score of -1. You can read more about it here: <a href="https://monkeylearn.com/sentiment-analysis/">https://monkeylearn.com/sentiment-analysis/</a></p>
+<p>Next, I pull out user mentions, hashtags, and URLs from the tweets. For each of these, I used regex, which is a helpful tool for pattern-matching text. In this specific case, as the regex for a URL is quite complicated I opted to use one from <a href="https://uibakery.io/regex-library/url-regex-python">https://uibakery.io/regex-library/url-regex-python</a>. This website and ones like it contain a lot of helpful regex statements for a variety of uses. Finally, I remove all of the things I just pulled out from the tweet, so we have a cleaner tweet to use for topic modeling.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
         <span class="n">print_percent</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="mf">0.001</span><span class="p">,</span> <span class="s1">&#39;Sentiment Score Progress&#39;</span><span class="p">)</span>
         <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="s2">&quot;sentiment_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TextBlob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]))</span><span class="o">.</span><span class="n">sentiment</span><span class="o">.</span><span class="n">polarity</span>
@@ -14635,9 +14678,30 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;(?:@\w+|#\w+|https?:</span><span class="se">\\</span><span class="s1">/</span><span class="se">\\</span><span class="s1">/(?:www</span><span class="se">\\</span><span class="s1">.)?[-a-zA-Z0-9@:%._</span><span class="se">\\</span><span class="s1">+~#=]{1,256}</span><span class="se">\\</span><span class="s1">.[a-zA-Z0-9()]{1,6}</span><span class="se">\\</span><span class="s1">b(?:[-a-zA-Z0-9()@:%_</span><span class="se">\\</span><span class="s1">+.~#?&amp;</span><span class="se">\\</span><span class="s1">/=]*))&#39;</span><span class="p">),</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">df</span>
+</pre></div>
 
+     </div>
+</div>
+</div>
+</div>
 
-<span class="k">def</span> <span class="nf">gen_training_groups</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">training_size</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">):</span>
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="gen_training_groups()">gen_training_groups()<a class="anchor-link" href="#gen_training_groups()">&#182;</a></h2><p>When training any kind of model, in order to see the effectiveness of the model it’s important to have distinct training sets and test sets. This function simply makes sure we have a set with an equal number of Republican and Democrat tweets, then splits it into the testing and training set. Because we equal number of each political party, we know that a random guess should only be correct 50% of the time, which will make it easy to see how our model performs compared to guessing.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">gen_training_groups</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">training_size</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">):</span>
     <span class="n">party_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">training_size</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
     
     <span class="n">dems</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">party_size</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
@@ -14649,8 +14713,31 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     <span class="n">y</span> <span class="o">=</span> <span class="n">training_small</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span>
     
     <span class="k">return</span>  <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="n">test_ratio</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">7744</span><span class="p">)</span>
+</pre></div>
 
-<span class="k">def</span> <span class="nf">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">blacklist</span><span class="p">):</span>
+     </div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="train_occurance_score()-and-score_occurance()">train_occurance_score() and score_occurance()<a class="anchor-link" href="#train_occurance_score()-and-score_occurance()">&#182;</a></h2><p>One of the main ways this model predicts political affiliation is by looking at user mentions, hashtags used, and externally linked websites. The purpose of <strong>train_occurance_score()</strong> to look at all of the different items and see how commonly used each item is by either political party. Items used by predominantly Democrats receive a positive score, and items used predominantly by Republicans receive a negative score. The magnitude of this score is determined by two factors. How often in total the item was used, and how strongly the item correlated to one of the parties. The weight calculated by the total usage was done using a logarithmic scale, so that very popular items wouldn’t completely outweigh less common ones.</p>
+<p>Once a score is computed for each type of item this is where <strong>score_occurance()</strong> comes in. We give the tweets a political leaning score for each type of item. So for instance, a tweet will have a score for the political alignment of the websites it linked to. All of these scores will be directly fed into a classifier model later to be used for predictions.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">train_occurance_score</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">blacklist</span><span class="p">):</span>
     <span class="n">r_series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;party&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;R&#39;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">explode</span><span class="p">()</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
     <span class="n">r_series</span> <span class="o">=</span> <span class="n">r_series</span><span class="p">[</span><span class="n">r_series</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">]</span>
     <span class="n">r_series</span> <span class="o">=</span> <span class="n">r_series</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">&quot;r_occurances&quot;</span><span class="p">)</span>
@@ -14683,8 +14770,31 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
                 <span class="n">total</span> <span class="o">+=</span> <span class="n">item_scores</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
         <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="n">col</span><span class="o">+</span><span class="s1">&#39;_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total</span>
     <span class="k">return</span> <span class="n">df</span>
+</pre></div>
 
-<span class="k">def</span> <span class="nf">lda_train</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+     </div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="lda_train()-and-lda_predict()">lda_train() and lda_predict()<a class="anchor-link" href="#lda_train()-and-lda_predict()">&#182;</a></h2><p>These two functions are another way that natural language processing finds its way into this project. Latent Dirichlet Allocation (or LDA) is a statistical method for identifying topics in a series of texts. It essentially sees which words are often used together and groups them into topics. Each word in the English language then has a score for how related to a topic it is. After LDA trains on a set of texts and establishes topics, it can then be used to find those topics in other texts. Out of all the other models used within this project, LDA is by far the most resource-intensive and therefore the slowest. You can read more about running LDA here: <a href="https://www.analyticsvidhya.com/blog/2021/06/part-2-topic-modeling-and-latent-dirichlet-allocation-lda-using-gensim-and-sklearn/">https://www.analyticsvidhya.com/blog/2021/06/part-2-topic-modeling-and-latent-dirichlet-allocation-lda-using-gensim-and-sklearn/</a>.</p>
+<p>LDA is important for this project because it gives us a way to find political affiliation outside of just the items referenced in the tweet and overall sentiment. We can instead see which topics are being discussed in the body of the tweet. LDA will give us a score for each tweet as to how related to each topic it is. Then like the other attributes we can give these scores to the classifier to learn and predict off of.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">lda_train</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
     <span class="n">count_vector</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">max_df</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stop_words</span><span class="o">=</span><span class="s1">&#39;english&#39;</span><span class="p">)</span>
     <span class="n">terms</span> <span class="o">=</span> <span class="n">count_vector</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">))</span>
 
@@ -14697,8 +14807,31 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <span class="k">def</span> <span class="nf">lda_predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">):</span>
     <span class="n">topic_values</span> <span class="o">=</span> <span class="n">count_vector</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;clean_tweet&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">lda_model</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">topic_values</span><span class="p">)</span>
-    
-<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">):</span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="train()">train()<a class="anchor-link" href="#train()">&#182;</a></h2><p>This function is where everything comes together. It takes in the training data set and begins running it through all the previous processes that we’ve discussed. It processes and cleans the data, runs sentiment analysis, calculates scoring based on the occurrences of different items, and performs LDA topic modeling. Now that we have all of the different scores and metrics in one place, we can finally give them to our classifier.</p>
+<p>For this project, I chose a Random Forest Classifier. Random Forest models essentially are made up of many decision trees that work together to make a single final prediction. You can read more about how this type of model functions here: <a href="https://towardsdatascience.com/understanding-random-forest-58381e0602d2">https://towardsdatascience.com/understanding-random-forest-58381e0602d2</a>.  I originally used a variety of different classifiers including linear regression and SVM but found Random Forest produced the highest levels of accuracy. When we train a classifier, it essentially figures out which attributes to weigh more heavily than others, and in which direction each attribute influences the outcome, in this case, political alignment. Once it’s finished with this, we can then pass on all of the trained models, so that we can run predictions on the test data set and see the accuracy of this model.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">):</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">X_train</span><span class="p">,</span><span class="n">y_train</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;party&quot;</span><span class="p">})</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
@@ -14725,8 +14858,31 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     <span class="n">classification_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_scores</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span>
+</pre></div>
 
-<span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">):</span>
+     </div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="predict()">predict()<a class="anchor-link" href="#predict()">&#182;</a></h2><p>By the time this function is called, we have loaded all of our data, split it into testing/training groups, and run it through the training phase of our model. This function takes in all the trained models that have been produced and then uses them on data the model has yet to see. Unlike the training parts, this function is crucially not given the political alignment of the tweets and must guess for itself.</p>
+<p>The function does get to do the same processing that has been done in the past, where user items are pulled out of the tweet and the tweet is cleaned. Then using each of the trained models that it has been passed, it runs the testing set through these models. This gives it a final array of values for each of the tweets. This matrix is then fed to the trained classifier, which for each tweet guesses the political alignment of the tweet’s author. The function then returns this list of predictions, which will be evaluated for accuracy.</p>
+
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning processing...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
@@ -14746,8 +14902,6 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning classification predicting ...</span><span class="se">\t\t</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="n">predictions</span> <span class="o">=</span> <span class="n">classification_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_predict_scores</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">predictions</span>
-    
-    
 </pre></div>
 
      </div>
@@ -14755,6 +14909,13 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="Results-and-Hypothesis-Testing">Results and Hypothesis Testing<a class="anchor-link" href="#Results-and-Hypothesis-Testing">&#182;</a></h2>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -14798,10 +14959,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[77]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[81]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">gen_training_groups</span><span class="p">(</span><span class="n">unscored_set</span><span class="p">,</span> <span class="mi">100000</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">gen_training_groups</span><span class="p">(</span><span class="n">unscored_set</span><span class="p">,</span> <span class="mi">200000</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14814,7 +14975,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[78]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[82]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">scored_set</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span> <span class="o">=</span> <span class="n">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
@@ -14856,7 +15017,7 @@ Beginning classification model training ...
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[79]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[83]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">predictions</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">classification_model</span><span class="p">,</span> <span class="n">lda_model</span><span class="p">,</span> <span class="n">count_vector</span><span class="p">,</span> <span class="n">item_scores</span><span class="p">)</span>
@@ -14898,7 +15059,7 @@ Beginning classification predicting ...
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[80]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[90]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
@@ -14919,13 +15080,13 @@ Beginning classification predicting ...
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[80]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[90]:</div>
 
 
 
 
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
-<pre>0.8169333333333333</pre>
+<pre>0.8344166666666667</pre>
 </div>
 
 </div>
@@ -14934,15 +15095,30 @@ Beginning classification predicting ...
 
 </div>
 
+</div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="Results-and-Hypothesis-Testing">Results and Hypothesis Testing<a class="anchor-link" href="#Results-and-Hypothesis-Testing">&#182;</a></h2><p>So in the end I chose to train this model on 200,000 tweets. This process took about 10 minutes to load the datasets, train them, then test them. In the end, we achieved an accuracy score of around 83%. This is actually higher than I originally had anticipated, as when I manually tried to identify tweets I only achieved an accuracy of 75%, meaning that my model most likely is better than I am at predicting political alignment.</p>
+<p>But what do these results mean for our hypothesis? In order for our hypothesis to be correct, we must disprove our null hypothesis. Commonly a p-value of less than 0.05 is needed to say that the null hypothesis is incorrect. A p-value indicates the probability that the current result was achieved given that the null hypothesis is true. So a p-value of 0.05 equates to a 1 in 20 chance that this result could have been obtained with a correct null hypothesis.</p>
+<p>So how would we calculate the p-value in this case? Since the dataset we tested on has almost an identical number of Republican and Democratic tweets, we can clearly see that by guessing we would be correct 50% of the time. In this case, we can use a binomial probability calculator to find the p-value. We know out of 60,000 test tweets, we correctly guessed 50,065, so we can plug these in to find the p-value for our model.</p>
+
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[69]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[101]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unscored_set</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">binomtest</span>
+<span class="n">successes</span><span class="o">=</span><span class="mi">50065</span>
+<span class="n">number_of_trials</span><span class="o">=</span><span class="mi">60000</span>
+<span class="n">probability_of_success</span><span class="o">=</span><span class="mf">0.5</span>
+<span class="n">binom</span> <span class="o">=</span> <span class="n">binomtest</span><span class="p">(</span><span class="n">successes</span><span class="p">,</span> <span class="n">number_of_trials</span><span class="p">,</span> <span class="n">probability_of_success</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">binom</span><span class="o">.</span><span class="n">pvalue</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14960,284 +15136,12 @@ Beginning classification predicting ...
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[69]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 
 
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id_x</th>
-      <th>screen_name_x</th>
-      <th>user_id</th>
-      <th>time</th>
-      <th>link</th>
-      <th>text</th>
-      <th>source</th>
-      <th>index</th>
-      <th>name</th>
-      <th>chamber</th>
-      <th>type</th>
-      <th>party</th>
-      <th>accounts</th>
-      <th>id_y</th>
-      <th>state</th>
-      <th>prev_props</th>
-      <th>screen_name_y</th>
-      <th>account_type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1527513997544722432</td>
-      <td>laurenboebert</td>
-      <td>1201670995435646976</td>
-      <td>2022-05-20 00:58:11-04:00</td>
-      <td>https://www.twitter.com/laurenboebert/statuses...</td>
-      <td>When President Trump wanted to spend $25 billi...</td>
-      <td>Twitter for iPhone</td>
-      <td>151.0</td>
-      <td>Lauren Boebert</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'id': '1201670995435646976', 'screen_name': '...</td>
-      <td>{'bioguide': 'B000825', 'govtrack': 456805}</td>
-      <td>CO</td>
-      <td>NaN</td>
-      <td>laurenboebert</td>
-      <td>campaign</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>1527506719605235712</td>
-      <td>AdamKinzinger</td>
-      <td>18004222</td>
-      <td>2022-05-20 00:29:16-04:00</td>
-      <td>https://www.twitter.com/AdamKinzinger/statuses...</td>
-      <td>Give #Ukraine the F16…. https://twitter.com/dk...</td>
-      <td>Twitter for iPhone</td>
-      <td>237.0</td>
-      <td>Adam Kinzinger</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'id': '18004222', 'screen_name': 'AdamKinzing...</td>
-      <td>{'bioguide': 'K000378', 'govtrack': 412421}</td>
-      <td>IL</td>
-      <td>NaN</td>
-      <td>AdamKinzinger</td>
-      <td>campaign</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>1527505795532955648</td>
-      <td>WarrenDavidson</td>
-      <td>742735530287304704</td>
-      <td>2022-05-20 00:25:35-04:00</td>
-      <td>https://www.twitter.com/WarrenDavidson/statuse...</td>
-      <td>@Jestopher_BTC @Melt_Dem @PeterMcCormack @SolG...</td>
-      <td>Twitter for iPhone</td>
-      <td>482.0</td>
-      <td>Warren Davidson</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'id': '742735530287304704', 'screen_name': 'W...</td>
-      <td>{'bioguide': 'D000626', 'govtrack': 412675}</td>
-      <td>OH</td>
-      <td>NaN</td>
-      <td>WarrenDavidson</td>
-      <td>office</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>1527504983909974016</td>
-      <td>NikemaWilliams</td>
-      <td>36424664</td>
-      <td>2022-05-20 00:22:22-04:00</td>
-      <td>https://www.twitter.com/NikemaWilliams/statuse...</td>
-      <td>@caitlinhighland @GaBudget I’m a Future Now Al...</td>
-      <td>Twitter for iPhone</td>
-      <td>215.0</td>
-      <td>Nikema Williams</td>
-      <td>house</td>
-      <td>member</td>
-      <td>D</td>
-      <td>{'id': '36424664', 'screen_name': 'NikemaWilli...</td>
-      <td>{'bioguide': 'W000788', 'govtrack': 456811}</td>
-      <td>GA</td>
-      <td>NaN</td>
-      <td>NikemaWilliams</td>
-      <td>campaign</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1527502998435504128</td>
-      <td>claudiatenney</td>
-      <td>756285384</td>
-      <td>2022-05-20 00:14:29-04:00</td>
-      <td>https://www.twitter.com/bennyjohnson/statuses/...</td>
-      <td>RT @bennyjohnson Pro-Life mom ends the career ...</td>
-      <td>Twitter for iPhone</td>
-      <td>434.0</td>
-      <td>Claudia Tenney</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'id': '756285384', 'screen_name': 'claudiaten...</td>
-      <td>{'bioguide': 'T000478', 'govtrack': 412720}</td>
-      <td>NY</td>
-      <td>NaN</td>
-      <td>claudiatenney</td>
-      <td>campaign</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>450250</th>
-      <td>1602154754800582656</td>
-      <td>JoaquinCastrotx</td>
-      <td>231510077</td>
-      <td>2022-12-11 23:13:54-05:00</td>
-      <td>https://www.twitter.com/JoaquinCastrotx/status...</td>
-      <td>Congratulations to @KarenBassLA on becoming th...</td>
-      <td>Twitter for iPhone</td>
-      <td>568.0</td>
-      <td>Joaquin Castro</td>
-      <td>house</td>
-      <td>member</td>
-      <td>D</td>
-      <td>{'id': '231510077', 'screen_name': 'JoaquinCas...</td>
-      <td>{'bioguide': 'C001091', 'govtrack': 412576}</td>
-      <td>TX</td>
-      <td>NaN</td>
-      <td>JoaquinCastrotx</td>
-      <td>office</td>
-    </tr>
-    <tr>
-      <th>450251</th>
-      <td>1602154092079489024</td>
-      <td>RepMeijer</td>
-      <td>1334164871420796928</td>
-      <td>2022-12-11 23:11:16-05:00</td>
-      <td>https://www.twitter.com/RepMeijer/statuses/160...</td>
-      <td>@guypbenson Give S2 a chance</td>
-      <td>Twitter for iPhone</td>
-      <td>336.0</td>
-      <td>Peter Meijer</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'screen_name': 'RepMeijer', 'id': '1334164871...</td>
-      <td>{'bioguide': 'M001186', 'govtrack': 456826}</td>
-      <td>MI</td>
-      <td>NaN</td>
-      <td>RepMeijer</td>
-      <td>office</td>
-    </tr>
-    <tr>
-      <th>450252</th>
-      <td>1602152788355649536</td>
-      <td>chiproytx</td>
-      <td>1257667158</td>
-      <td>2022-12-11 23:06:05-05:00</td>
-      <td>https://www.twitter.com/borderObserver/statuse...</td>
-      <td>RT @borderObserver Collaborative efforts shut ...</td>
-      <td>Twitter for iPad</td>
-      <td>558.0</td>
-      <td>Chip Roy</td>
-      <td>house</td>
-      <td>member</td>
-      <td>R</td>
-      <td>{'account_type': 'campaign', 'screen_name': 'c...</td>
-      <td>{'bioguide': 'R000614', 'govtrack': 412826}</td>
-      <td>TX</td>
-      <td>NaN</td>
-      <td>chiproytx</td>
-      <td>campaign</td>
-    </tr>
-    <tr>
-      <th>450253</th>
-      <td>1602152360540766208</td>
-      <td>SenatorHassan</td>
-      <td>946549322</td>
-      <td>2022-12-11 23:04:23-05:00</td>
-      <td>https://www.twitter.com/SenatorHassan/statuses...</td>
-      <td>Found a pleasant surprise when I took Chip out...</td>
-      <td>Twitter for iPhone</td>
-      <td>757.0</td>
-      <td>Maggie Hassan</td>
-      <td>senate</td>
-      <td>member</td>
-      <td>D</td>
-      <td>{'id': '946549322', 'screen_name': 'SenatorHas...</td>
-      <td>{'bioguide': 'H001076', 'govtrack': 412680}</td>
-      <td>NH</td>
-      <td>NaN</td>
-      <td>SenatorHassan</td>
-      <td>office</td>
-    </tr>
-    <tr>
-      <th>450254</th>
-      <td>1602151821098860544</td>
-      <td>RitchieTorres</td>
-      <td>1247612029</td>
-      <td>2022-12-11 23:02:15-05:00</td>
-      <td>https://www.twitter.com/RitchieTorres/statuses...</td>
-      <td>We're not going to leave it to the forces of h...</td>
-      <td>Twitter for Android</td>
-      <td>458.0</td>
-      <td>Ritchie Torres</td>
-      <td>house</td>
-      <td>member</td>
-      <td>D</td>
-      <td>{'id': '1247612029', 'screen_name': 'RitchieTo...</td>
-      <td>{'bioguide': 'T000486', 'govtrack': 456838}</td>
-      <td>NY</td>
-      <td>NaN</td>
-      <td>RitchieTorres</td>
-      <td>campaign</td>
-    </tr>
-  </tbody>
-</table>
-<p>450255 rows × 18 columns</p>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
+<pre>0.0
+</pre>
 </div>
 </div>
 
@@ -15246,7 +15150,14 @@ Beginning classification predicting ...
 </div>
 
 </div>
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<p>As we can see, we get a p-value of 0. While in actuality it isn’t zero, it's so small that python just rounded it to a zero. This intuitively makes sense of course, as when we’re dealing with such large numbers the chance that we guessed so many correctly is incredibly small. Since our p-value is (very) below 0.05, we can conclude that the null hypothesis likely is incorrect. This means that our initial hypothesis is correct, and we were able to make a model that can guess the political alignment of the author better than random guessing.</p>
+<p>So what can we do to improve? One of the easiest ways to improve the model accuracy is to increase the sample size. For this model in particular, I’ve noticed that increasing the sample size has consistently increased the accuracy of the model quite significantly. Additionally, there are many parameters in this model that could be tuned for better results. For instance, the number of topics the LDA model produces. There are also likely many more attributes to be considered that would increase the accuracy at least somewhat. However, there is a limit as to how far it can be increased, given that some tweets are so short or simply lack any kind of partisan content, so a model can only perform so well. Overall, I’m very happy with the accuracy of the model.</p>
 
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
