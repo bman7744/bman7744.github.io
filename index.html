@@ -15606,7 +15606,7 @@ Beginning classification predicting ...
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <p>As we can see, we get a p-value of 0. While in actuality it isn’t zero, it's so small that python just rounded it to a zero. This intuitively makes sense of course, as when we’re dealing with such large numbers the chance that we guessed so many correctly is incredibly small. Since our p-value is (very) below 0.05, we can conclude that the null hypothesis likely is incorrect. This means that our initial hypothesis is correct, and we were able to make a model that can guess the political alignment of the author better than random guessing.</p>
 <p>So what can we do to improve? One of the easiest ways to improve the model accuracy is to increase the sample size. For this model in particular, I’ve noticed that increasing the sample size has consistently increased the accuracy of the model quite significantly. Additionally, there are many parameters in this model that could be tuned for better results. For instance, the number of topics the LDA model produces. There are also likely many more attributes to be considered that would increase the accuracy at least somewhat. However, there is a limit as to how far it can be increased, given that some tweets are so short or simply lack any kind of partisan content, so a model can only perform so well. Overall, I’m very happy with the accuracy of the model.</p>
-<p>Below we can see that with Democrats we were correct slightly more often, though both groups proved to be fairly similar.</p>
+<h2 id="Graphing-the-Results">Graphing the Results<a class="anchor-link" href="#Graphing-the-Results">&#182;</a></h2><p>Below we can see that with Democrats we were correct slightly more often, though both groups proved to be fairly similar in how often they were guessed correctly.</p>
 
 </div>
 </div>
@@ -15624,8 +15624,6 @@ Beginning classification predicting ...
 <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;correct_int&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;correct&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 <span class="n">correct</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">correct</span><span class="p">,</span><span class="n">unscored_set</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">)</span>
 <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">correct</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">len</span><span class="p">()</span>
-<span class="c1">#correct.groupby(&#39;account_type&#39;).mean()[&#39;correct_int&#39;]</span>
-<span class="c1">#correct[[&#39;length&#39;,&#39;text&#39;,&#39;correct_int&#39;]]</span>
 </pre></div>
 
      </div>
